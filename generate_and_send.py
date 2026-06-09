@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # 누드TV 일일 · 월누적 리포트 자동 생성 / 텔레그램 채널 발송
-import os, io, sys, csv, math, html, datetime, urllib.request
+import os, io, sys, re, csv, math, html, datetime, urllib.request
 from jinja2 import Template
 from playwright.sync_api import sync_playwright
 import requests
@@ -77,6 +77,17 @@ def load_texts():
 def fill(text, **tokens):
     for k, v in tokens.items():
         text = text.replace("{" + k + "}", str(v))
+    return text
+
+# 링크 정리: 마크다운 [글자](주소) → <a>, 그리고 깨진 <a> 태그(따옴표 깨짐/스마트따옴표/중복따옴표) 자동 복구
+_URLCHARS = r"[^\s<>\"'“”‘’]+"
+def fix_links(text):
+    # 1) 마크다운 링크 → HTML
+    text = re.sub(r"\[([^\]]+)\]\((https?://" + _URLCHARS + r")\)",
+                  r'<a href="\2">\1</a>', text)
+    # 2) <a ...주소...> 형태를 깨끗한 <a href="주소">로 복구
+    text = re.sub(r"<a\b[^>]*?(https?://" + _URLCHARS + r")[^>]*>",
+                  r'<a href="\1">', text)
     return text
 
 # ===== 다단 레이아웃 (줄 수에 따라 자동 열 분할) =====
@@ -174,13 +185,13 @@ def main(mode="all"):
     # 캡션은 시트 '문구' 탭에서 가져옴(없으면 기본값). HTML 링크 그대로 살림.
     texts = load_texts()
     if do_month:
-        cap = fill(texts["월누적 캡션"], 년=y, 월=m, 일=d, 합계=month_total, 일자별=month_daily)
+        cap = fix_links(fill(texts["월누적 캡션"], 년=y, 월=m, 일=d, 합계=month_total, 일자별=month_daily))
         send_photo("month.png", cap)
         print("월누적 발송 완료:", target, "| 총", month_total)
     if do_day:
-        cap = fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total, 업체별=day_list)
+        cap = fix_links(fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total, 업체별=day_list))
         send_photo("day.png", cap)
-        title = fill(texts["스포일러 제목"], 년=y, 월=m, 일=d, 합계=day_total)
+        title = fix_links(fill(texts["스포일러 제목"], 년=y, 월=m, 일=d, 합계=day_total))
         # 탭하면 접혔다 펼쳐지는 인용블록(expandable blockquote)으로 전체 업체 표시
         send_message(f"{title}\n<blockquote expandable>{spoiler}</blockquote>")
         print("업체별 발송 완료:", target, "| 총", day_total)
