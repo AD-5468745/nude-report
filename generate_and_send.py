@@ -23,6 +23,7 @@ DEFAULT_TEXTS = {
     "스포일러 제목": "▼ 전체 업체 펼쳐보기",
 }
 SCALE = 2                 # 이미지 선명도 배율 (3으로 올리면 더 또렷, 용량↑)
+SPOILER_WIDTH = 20        # '전체 업체 펼쳐보기' 메시지 폭 맞춤용 구분선 길이(폭 안 맞으면 조절)
 TEMPLATE = "report_template.html"
 
 # ===== 구글 시트 읽기 (API 키 불필요, CSV export) =====
@@ -89,11 +90,6 @@ def fix_links(text):
     text = re.sub(r"<a\b[^>]*?(https?://" + _URLCHARS + r")[^>]*>",
                   r'<a href="\1">', text)
     return text
-
-# 텔레그램이 세는 캡션 길이(HTML 태그 제외, UTF-16 코드유닛). 사진 캡션 한도 1024.
-def caption_len(text):
-    visible = re.sub(r"<[^>]+>", "", text)
-    return len(visible.encode("utf-16-le")) // 2
 
 # ===== 다단 레이아웃 (줄 수에 따라 자동 열 분할) =====
 def layout(n):
@@ -197,14 +193,11 @@ def main(mode="all"):
     if do_day:
         cap   = fix_links(fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total, 업체별=day_list))
         title = fix_links(fill(texts["스포일러 제목"], 년=y, 월=m, 일=d, 합계=day_total))
-        # 전체 업체 목록 = 탭하면 접/펼침 인용블록. 기본은 이미지 캡션에 함께 넣음.
-        block = f"{title}\n<blockquote expandable>{spoiler}</blockquote>"
-        combined = f"{cap}\n{block}"
-        if caption_len(combined) <= 1024:
-            send_photo("day.png", combined)            # 이미지 + 캡션 + 전체업체 한 번에
-        else:
-            send_photo("day.png", cap)                  # 너무 길면 안전하게 분리 발송
-            send_message(block)
+        send_photo("day.png", cap)                       # ① 이미지 + 업체별 캡션(홍보·링크)
+        # ② 전체 업체 목록(탭하면 접/펼침) — 항상 별도 메시지.
+        # 넓은 구분선으로 말풍선 폭을 위 이미지 메시지와 맞춤(SPOILER_WIDTH로 길이 조절).
+        divider = "━" * SPOILER_WIDTH
+        send_message(f"{title}\n{divider}\n<blockquote expandable>{spoiler}</blockquote>")
         print("업체별 발송 완료:", target, "| 총", day_total)
 
 if __name__ == "__main__":
