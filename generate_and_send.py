@@ -90,6 +90,11 @@ def fix_links(text):
                   r'<a href="\1">', text)
     return text
 
+# 텔레그램이 세는 캡션 길이(HTML 태그 제외, UTF-16 코드유닛). 사진 캡션 한도 1024.
+def caption_len(text):
+    visible = re.sub(r"<[^>]+>", "", text)
+    return len(visible.encode("utf-16-le")) // 2
+
 # ===== 다단 레이아웃 (줄 수에 따라 자동 열 분할) =====
 def layout(n):
     c = 1 if n <= 15 else 2 if n <= 32 else 3 if n <= 66 else 4
@@ -151,8 +156,9 @@ def main(mode="all"):
                 by_day[dt] = by_day.get(dt, 0) + cnt
         month_rows  = [Row([f"{m}월 {dt.day}일", v]) for dt, v in sorted(by_day.items())]
         month_total = sum(by_day.values())
-        # 캡션 {일자별} 토큰용: "M월 D일 — N명" 줄들
-        month_daily = "\n".join(f"{m}월 {dt.day}일 — {v}명" for dt, v in sorted(by_day.items()))
+        # 캡션 {일자별} 토큰용: "M월 D일 — N명" 줄들 → 탭하면 접/펼침 인용블록
+        _daily_lines = "\n".join(f"{m}월 {dt.day}일 — {v}명" for dt, v in sorted(by_day.items()))
+        month_daily = f"<blockquote expandable>{_daily_lines}</blockquote>"
         month_html = build_html(tpl, f"{m}월 제휴업체 총 신규가입", month_total,
                                 ["신규 가입자", "신규 가입자 수"], month_rows)
 
@@ -189,11 +195,16 @@ def main(mode="all"):
         send_photo("month.png", cap)
         print("월누적 발송 완료:", target, "| 총", month_total)
     if do_day:
-        cap = fix_links(fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total, 업체별=day_list))
-        send_photo("day.png", cap)
+        cap   = fix_links(fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total, 업체별=day_list))
         title = fix_links(fill(texts["스포일러 제목"], 년=y, 월=m, 일=d, 합계=day_total))
-        # 탭하면 접혔다 펼쳐지는 인용블록(expandable blockquote)으로 전체 업체 표시
-        send_message(f"{title}\n<blockquote expandable>{spoiler}</blockquote>")
+        # 전체 업체 목록 = 탭하면 접/펼침 인용블록. 기본은 이미지 캡션에 함께 넣음.
+        block = f"{title}\n<blockquote expandable>{spoiler}</blockquote>"
+        combined = f"{cap}\n{block}"
+        if caption_len(combined) <= 1024:
+            send_photo("day.png", combined)            # 이미지 + 캡션 + 전체업체 한 번에
+        else:
+            send_photo("day.png", cap)                  # 너무 길면 안전하게 분리 발송
+            send_message(block)
         print("업체별 발송 완료:", target, "| 총", day_total)
 
 if __name__ == "__main__":
