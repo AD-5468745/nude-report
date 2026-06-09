@@ -181,7 +181,8 @@ def main(mode="all"):
         cap = fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total, 업체별=day_list)
         send_photo("day.png", cap)
         title = fill(texts["스포일러 제목"], 년=y, 월=m, 일=d, 합계=day_total)
-        send_message(f"{title}\n<tg-spoiler>{spoiler}</tg-spoiler>")
+        # 탭하면 접혔다 펼쳐지는 인용블록(expandable blockquote)으로 전체 업체 표시
+        send_message(f"{title}\n<blockquote expandable>{spoiler}</blockquote>")
         print("업체별 발송 완료:", target, "| 총", day_total)
 
 if __name__ == "__main__":
