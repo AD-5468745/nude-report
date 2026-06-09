@@ -1,0 +1,35 @@
+name: nudeTV-company-report
+
+# 업체별 리포트 + 전체 업체 스포일러 — 매일 저녁 20:00 KST 발송
+on:
+  schedule:
+    # cron은 UTC 기준. 11:00 UTC = 20:00 KST (한국시간 저녁 8시)
+    - cron: "0 11 * * *"
+  workflow_dispatch: {}   # Actions 탭에서 수동 실행(테스트용)
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 한글 폰트 설치 (CDN 실패 대비 보험)
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+
+      - name: 의존성 설치
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: 업체별 리포트 생성 · 발송
+        env:
+          SHEET_ID:      ${{ secrets.SHEET_ID }}
+          GID_RECORDS:   ${{ secrets.GID_RECORDS }}
+          GID_COMPANIES: ${{ secrets.GID_COMPANIES }}
+          BOT_TOKEN:     ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID:    ${{ secrets.CHANNEL_ID }}
+        run: python generate_and_send.py day

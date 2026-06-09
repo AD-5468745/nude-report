@@ -1,0 +1,35 @@
+name: nudeTV-month-report
+
+# 월 누적(일일별) 리포트 — 매일 낮 12:00 KST 발송
+on:
+  schedule:
+    # cron은 UTC 기준. 03:00 UTC = 12:00 KST (한국시간 낮 12시)
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}   # Actions 탭에서 수동 실행(테스트용)
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 한글 폰트 설치 (CDN 실패 대비 보험)
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+
+      - name: 의존성 설치
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: 월 누적 리포트 생성 · 발송
+        env:
+          SHEET_ID:      ${{ secrets.SHEET_ID }}
+          GID_RECORDS:   ${{ secrets.GID_RECORDS }}
+          GID_COMPANIES: ${{ secrets.GID_COMPANIES }}
+          BOT_TOKEN:     ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID:    ${{ secrets.CHANNEL_ID }}
+        run: python generate_and_send.py month
