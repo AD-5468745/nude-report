@@ -34,10 +34,26 @@ def fetch_csv(gid):
         return list(csv.reader(io.StringIO(r.read().decode("utf-8"))))
 
 def parse_date(s):
-    s = s.strip()
-    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d"):
+    # 구글시트가 날짜셀을 CSV로 내보낼 때 생기는 다양한 형식을 모두 수용한다.
+    # 예: 2026-06-08 / 2026/6/8 / 2026.6.8 / "2026. 6. 8"(점+공백) / 6/8 / 6.8 / 6-8
+    s = s.strip().replace(" ", "").rstrip(".")   # "2026. 6. 8" → "2026.6.8"
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d", "%Y%m%d",
+                "%m/%d/%Y", "%m-%d-%Y", "%m.%d.%Y"):
         try: return datetime.datetime.strptime(s, fmt).date()
         except ValueError: pass
+    # 연도 없는 'M/D', 'M.D', 'M-D' → 올해(KST 기준)로 보정
+    for sep in ("/", ".", "-"):
+        if sep in s:
+            parts = s.split(sep)
+            if len(parts) == 2 and all(p.isdigit() for p in parts):
+                try:
+                    yr = datetime.datetime.now(KST).year
+                    return datetime.date(yr, int(parts[0]), int(parts[1]))
+                except ValueError:
+                    pass
+            break
     return None
 
 def load_data():
