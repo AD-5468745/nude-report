@@ -23,7 +23,7 @@ DEFAULT_TEXTS = {
     "스포일러 제목": "▼ 전체 업체 펼쳐보기",
 }
 SCALE = 2                 # 이미지 선명도 배율 (3으로 올리면 더 또렷, 용량↑)
-SPOILER_WIDTH = 20        # '전체 업체 펼쳐보기' 메시지 폭 맞춤용 구분선 길이(폭 안 맞으면 조절)
+SPOILER_WIDTH = 16        # '전체 업체 펼쳐보기' 메시지 폭 맞춤용 구분선 길이(폭 안 맞으면 조절)
 TEMPLATE = "report_template.html"
 
 # ===== 구글 시트 읽기 (API 키 불필요, CSV export) =====
