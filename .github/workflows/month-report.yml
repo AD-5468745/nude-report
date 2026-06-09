@@ -1,11 +1,9 @@
 name: nudeTV-month-report
 
-# 월 누적(일일별) 리포트 — 매일 낮 12:00 KST 발송
+# 월 누적(일일별) 리포트
+# 발송 시각은 외부 크론(cron-job.org)이 정확히 트리거함. (GitHub 자체 예약은 중복 방지 위해 제거)
 on:
-  schedule:
-    # cron은 UTC 기준. 03:00 UTC = 12:00 KST (한국시간 낮 12시)
-    - cron: "0 3 * * *"
-  workflow_dispatch: {}   # Actions 탭에서 수동 실행(테스트용)
+  workflow_dispatch: {}   # 외부 크론 / 시트 메뉴 / 수동 실행
 
 jobs:
   report:
