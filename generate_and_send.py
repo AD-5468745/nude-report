@@ -67,13 +67,11 @@ def load_texts():
     loaded = []
     for row in rows[1:]:
         if len(row) >= 2 and row[0].strip():
-            texts[row[0].strip()] = row[1]   # 값은 줄바꿈/HTML 보존 위해 strip 안 함
+            # 값은 HTML/줄바꿈 보존 위해 strip 안 함.
+            # 한 셀에 한 줄로 넣을 수 있게 리터럴 '\n' → 실제 줄바꿈 (실제 줄바꿈은 그대로 둠)
+            texts[row[0].strip()] = row[1].replace("\\n", "\n")
             loaded.append(row[0].strip())
     print(f"[문구] 읽은 행수={len(rows)} | 적용된 키={loaded}")
-    if rows:
-        print(f"[문구] 1행 미리보기={rows[0]!r}")
-        if len(rows) > 1:
-            print(f"[문구] 2행 미리보기={rows[1]!r}")
     return texts
 
 def fill(text, **tokens):
