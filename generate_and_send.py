@@ -57,15 +57,23 @@ def load_data():
 def load_texts():
     texts = dict(DEFAULT_TEXTS)
     if not GID_TEXTS:
+        print("[문구] GID_TEXTS 미설정 → 기본 문구 사용")
         return texts
     try:
         rows = fetch_csv(GID_TEXTS)
     except Exception as e:
-        print("문구 탭 읽기 실패, 기본값 사용:", e)
+        print("[문구] 탭 읽기 실패 → 기본 문구 사용:", repr(e))
         return texts
+    loaded = []
     for row in rows[1:]:
         if len(row) >= 2 and row[0].strip():
             texts[row[0].strip()] = row[1]   # 값은 줄바꿈/HTML 보존 위해 strip 안 함
+            loaded.append(row[0].strip())
+    print(f"[문구] 읽은 행수={len(rows)} | 적용된 키={loaded}")
+    if rows:
+        print(f"[문구] 1행 미리보기={rows[0]!r}")
+        if len(rows) > 1:
+            print(f"[문구] 2행 미리보기={rows[1]!r}")
     return texts
 
 def fill(text, **tokens):
