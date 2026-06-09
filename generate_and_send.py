@@ -9,9 +9,19 @@ import requests
 SHEET_ID      = os.environ["SHEET_ID"]
 GID_RECORDS   = os.environ.get("GID_RECORDS", "0")    # '가입기록' 탭 gid
 GID_COMPANIES = os.environ["GID_COMPANIES"]           # '업체목록' 탭 gid
+GID_TEXTS     = os.environ.get("GID_TEXTS")           # '문구' 탭 gid (선택). 없으면 기본 문구 사용
 BOT_TOKEN     = os.environ["BOT_TOKEN"]
 CHANNEL_ID    = os.environ["CHANNEL_ID"]              # @채널아이디 또는 -100xxxxxxxxxx
 KST   = datetime.timezone(datetime.timedelta(hours=9))
+
+# ===== 캡션/문구 (구글시트 '문구' 탭에서 수정 가능, 없으면 아래 기본값) =====
+# 시트에서 쓸 수 있는 치환 토큰: {년} {월} {일} {합계}
+# HTML 링크/굵게 등 그대로 입력 가능:  <a href="https://...">텍스트</a>  ·  <b>강조</b>
+DEFAULT_TEXTS = {
+    "월누적 캡션":  "📊 누드TV {월}월 누적 신규가입\n🗓 {년}년 {월}월 · 총 {합계}명",
+    "업체별 캡션":  "📊 누드TV 파트너 일일 리포트\n🗓 {년}년 {월}월 {일}일 · 총 {합계}명",
+    "스포일러 제목": "▼ 전체 업체 펼쳐보기",
+}
 SCALE = 2                 # 이미지 선명도 배율 (3으로 올리면 더 또렷, 용량↑)
 TEMPLATE = "report_template.html"
 
@@ -42,6 +52,26 @@ def load_data():
     # 업체목록: [업체명]  (표시 순서, 1행은 헤더)
     companies = [r[0].strip() for r in fetch_csv(GID_COMPANIES)[1:] if r and r[0].strip()]
     return records, companies
+
+# ===== 문구(캡션) 로드: '문구' 탭 [키, 내용] (1행 헤더). 시트 없으면/실패하면 기본값 =====
+def load_texts():
+    texts = dict(DEFAULT_TEXTS)
+    if not GID_TEXTS:
+        return texts
+    try:
+        rows = fetch_csv(GID_TEXTS)
+    except Exception as e:
+        print("문구 탭 읽기 실패, 기본값 사용:", e)
+        return texts
+    for row in rows[1:]:
+        if len(row) >= 2 and row[0].strip():
+            texts[row[0].strip()] = row[1]   # 값은 줄바꿈/HTML 보존 위해 strip 안 함
+    return texts
+
+def fill(text, **tokens):
+    for k, v in tokens.items():
+        text = text.replace("{" + k + "}", str(v))
+    return text
 
 # ===== 다단 레이아웃 (줄 수에 따라 자동 열 분할) =====
 def layout(n):
@@ -131,12 +161,17 @@ def main(mode="all"):
         br.close()
 
     # 발송: 월 누적(낮12시) / 업체별 + 전체 스포일러(저녁8시)
+    # 캡션은 시트 '문구' 탭에서 가져옴(없으면 기본값). HTML 링크 그대로 살림.
+    texts = load_texts()
     if do_month:
-        send_photo("month.png", f"📊 누드TV {m}월 누적 신규가입\n🗓 {y}년 {m}월 · 총 {month_total}명")
+        cap = fill(texts["월누적 캡션"], 년=y, 월=m, 일=d, 합계=month_total)
+        send_photo("month.png", cap)
         print("월누적 발송 완료:", target, "| 총", month_total)
     if do_day:
-        send_photo("day.png",   f"📊 누드TV 파트너 일일 리포트\n🗓 {y}년 {m}월 {d}일 · 총 {day_total}명")
-        send_message(f"▼ 전체 업체 펼쳐보기\n<tg-spoiler>{spoiler}</tg-spoiler>")
+        cap = fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total)
+        send_photo("day.png", cap)
+        title = fill(texts["스포일러 제목"], 년=y, 월=m, 일=d, 합계=day_total)
+        send_message(f"{title}\n<tg-spoiler>{spoiler}</tg-spoiler>")
         print("업체별 발송 완료:", target, "| 총", day_total)
 
 if __name__ == "__main__":
