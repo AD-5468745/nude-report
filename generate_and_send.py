@@ -134,6 +134,8 @@ def main(mode="all"):
                 by_day[dt] = by_day.get(dt, 0) + cnt
         month_rows  = [Row([f"{m}월 {dt.day}일", v]) for dt, v in sorted(by_day.items())]
         month_total = sum(by_day.values())
+        # 캡션 {일자별} 토큰용: "M월 D일 — N명" 줄들
+        month_daily = "\n".join(f"{m}월 {dt.day}일 — {v}명" for dt, v in sorted(by_day.items()))
         month_html = build_html(tpl, f"{m}월 제휴업체 총 신규가입", month_total,
                                 ["신규 가입자", "신규 가입자 수"], month_rows)
 
@@ -147,6 +149,8 @@ def main(mode="all"):
         active = [(n, day_counts.get(n, 0)) for n in full_order if day_counts.get(n, 0) > 0]
         day_rows  = [Row([i + 1, n, v]) for i, (n, v) in enumerate(active)]
         day_total = sum(v for _, v in active)
+        # 캡션 {업체별} 토큰용: "N. 업체명 — N명" 줄들 (가입>0만)
+        day_list = "\n".join(f"{i + 1}. {html.escape(n)} — {v}명" for i, (n, v) in enumerate(active))
         # (3) 전체 업체 캡션(0 포함, 시트 순서대로 세로 나열)
         spoiler = "\n".join(f"{html.escape(n)} {day_counts.get(n, 0)}" for n in full_order)
         day_html   = build_html(tpl, f"{m}월 {d}일 총 가입자", day_total,
@@ -164,11 +168,11 @@ def main(mode="all"):
     # 캡션은 시트 '문구' 탭에서 가져옴(없으면 기본값). HTML 링크 그대로 살림.
     texts = load_texts()
     if do_month:
-        cap = fill(texts["월누적 캡션"], 년=y, 월=m, 일=d, 합계=month_total)
+        cap = fill(texts["월누적 캡션"], 년=y, 월=m, 일=d, 합계=month_total, 일자별=month_daily)
         send_photo("month.png", cap)
         print("월누적 발송 완료:", target, "| 총", month_total)
     if do_day:
-        cap = fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total)
+        cap = fill(texts["업체별 캡션"], 년=y, 월=m, 일=d, 합계=day_total, 업체별=day_list)
         send_photo("day.png", cap)
         title = fill(texts["스포일러 제목"], 년=y, 월=m, 일=d, 합계=day_total)
         send_message(f"{title}\n<tg-spoiler>{spoiler}</tg-spoiler>")
