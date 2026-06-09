@@ -4,7 +4,7 @@ name: nudeTV-company-report
 on:
   schedule:
     # cron은 UTC 기준. 11:00 UTC = 20:00 KST (한국시간 저녁 8시)
-    - cron: "56 12 * * *"
+    - cron: "23 13 * * *"
   workflow_dispatch: {}   # Actions 탭에서 수동 실행(테스트용)
 
 jobs:
