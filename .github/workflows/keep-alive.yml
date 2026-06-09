@@ -1,0 +1,26 @@
+name: keep-alive
+
+# 매주 월요일 13:00 KST(04:00 UTC) 작은 커밋을 자동으로 찍어
+# GitHub Actions 예약 실행이 "60일 무활동" 규칙으로 꺼지는 것을 방지한다.
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: keep-alive 커밋
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .keepalive
+          git add .keepalive
+          git commit -m "chore: keep-alive" || echo "변경 없음, 건너뜀"
+          git push
