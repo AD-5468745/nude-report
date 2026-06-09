@@ -30,6 +30,7 @@ jobs:
           SHEET_ID:      ${{ secrets.SHEET_ID }}
           GID_RECORDS:   ${{ secrets.GID_RECORDS }}
           GID_COMPANIES: ${{ secrets.GID_COMPANIES }}
+          GID_TEXTS:     ${{ secrets.GID_TEXTS }}
           BOT_TOKEN:     ${{ secrets.BOT_TOKEN }}
           CHANNEL_ID:    ${{ secrets.CHANNEL_ID }}
         run: python generate_and_send.py month
