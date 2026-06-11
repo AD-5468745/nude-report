@@ -168,8 +168,8 @@ def main(mode="all"):
                 by_day[dt] = by_day.get(dt, 0) + cnt
         month_rows  = [Row([f"{m}월 {dt.day}일", v]) for dt, v in sorted(by_day.items())]
         month_total = sum(by_day.values())
-        # 캡션 {일자별} 토큰용: "M월 D일 — N명" 줄들 → 탭하면 접/펼침 인용블록
-        _daily_lines = "\n".join(f"{m}월 {dt.day}일 — {v}명" for dt, v in sorted(by_day.items()))
+        # 캡션 {일자별} 토큰용: "M월 D일 — N명" 줄들 (최신 날짜가 위로) → 탭하면 접/펼침 인용블록
+        _daily_lines = "\n".join(f"{m}월 {dt.day}일 — {v}명" for dt, v in sorted(by_day.items(), reverse=True))
         month_daily = f"<blockquote expandable>{_daily_lines}</blockquote>"
         month_html = build_html(tpl, f"{m}월 제휴업체 총 신규가입", month_total,
                                 ["신규 가입자", "신규 가입자 수"], month_rows)
