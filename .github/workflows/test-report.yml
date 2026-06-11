@@ -1,0 +1,34 @@
+name: nudeTV-test-report
+
+# 테스트 채널 발송 — 실제 채널(CHANNEL_ID) 대신 TEST_CHANNEL_ID로 월누적+업체별을 한 번에 발송.
+# 메인 예약(월누적/업체별)이 정지(disable) 중이어도 이 워크플로우는 독립적으로 동작함.
+on:
+  workflow_dispatch: {}   # 시트 메뉴 '🧪 테스트 발송' / 수동 실행 전용
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 한글 폰트 설치 (CDN 실패 대비 보험)
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+
+      - name: 의존성 설치
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: 테스트 발송 (테스트 채널)
+        env:
+          SHEET_ID:      ${{ secrets.SHEET_ID }}
+          GID_RECORDS:   ${{ secrets.GID_RECORDS }}
+          GID_COMPANIES: ${{ secrets.GID_COMPANIES }}
+          GID_TEXTS:     ${{ secrets.GID_TEXTS }}
+          BOT_TOKEN:     ${{ secrets.BOT_TOKEN }}
+          CHANNEL_ID:    ${{ secrets.TEST_CHANNEL_ID }}   # ← 테스트 채널로 발송
+        run: python generate_and_send.py all
